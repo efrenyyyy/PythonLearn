@@ -1,0 +1,43 @@
+#encoding=utf8
+from email import encoders
+from email.header import Header
+from email.mime.text import MIMEText
+from email.utils import parseaddr, formataddr
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+
+def _format_addr(s):
+    name, addr = parseaddr(s)
+    return formataddr((Header(name, 'utf-8').encode(), addr.encode('utf-8') if isinstance(addr, unicode) else addr))
+
+user = raw_input('user: ')
+passwd = raw_input('passwd: ')
+smtp_addr = raw_input('smtp_addr: ')
+to_addr = raw_input('to_addr: ')
+
+msg = MIMEMultipart()
+content = '<html><body><h1>Hello</h1><p>send by <a href="http://www.python.org">Python</a>...</p><p><img src="cid:0"></p></body></html>'
+
+msg.attach(MIMEText(content, 'html', 'utf-8')) 
+msg['From'] = _format_addr(u'Python爱好者 <%s>' % user)
+msg['To'] = _format_addr(u'管理员 <%s>' % to_addr)
+msg['Subject'] = Header(u'来自SMTP的问候……', 'utf-8').encode()
+
+with open("C:\Users\efrenyang\Desktop\Koala.jpg", 'rb') as f:
+    mime = MIMEBase('image', 'jpg', filename = 'Koala.jpg')
+    mime.add_header('Content-Disposition', 'attachment', filename='Koala.jpg')
+    mime.add_header('Content-ID', '<0>')
+    mime.add_header('X-Attachment-Id', '0')
+    mime.set_payload(f.read())
+    encoders.encode_base64(mime)
+    msg.attach(mime)
+
+server = smtplib.SMTP(smtp_addr, 25)
+server.set_debuglevel(1)
+server.ehlo()
+server.starttls()
+server.login(user, passwd)
+server.sendmail(user, [to_addr], msg.as_string())
+server.quit()
+print "END"
