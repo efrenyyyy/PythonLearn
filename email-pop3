@@ -1,0 +1,75 @@
+import poplib
+import email
+from email.parser import Parser
+from email.header import decode_header
+from email.utils import parseaddr
+
+def print_info(msg, indent=0):
+    if indent == 0:
+        for header in ['From', 'To', 'Subject']:
+            value = msg.get(header, '')
+            if value:
+                if header == 'Subject':
+                    value = decode_str(value)
+                else:
+                    hdr, addr = parseaddr(value)
+                    name = decode_str(hdr)
+                    value = u'%s <%s>' %(name, addr)
+                print value
+    
+    if msg.is_multipart():
+        parts = msg.get_payload()
+        for n, part in enumerate(parts):
+            print ('%spart %s' % (' ' * indent, n))
+            print_info(part, indent+1)
+    else:
+        content_type = msg.get_content_type()
+        if content_type == 'text/plain' or content_type == 'text/html':
+            content = msg.get_payload(decode=True)
+            charset = guess_charset(msg)
+            if charset:
+                content = content.decode(charset)
+            print('%sText: %s' % ('  ' * indent, content + '...'))
+        else:
+            print ('%sAttachment: %s' % ('  ' * indent, content_type))
+            
+def decode_str(s):
+    value, charset = decode_header(s)[0]
+    if charset:
+        value = value.decode(charset)
+    return value
+
+def guess_charset(msg):
+    
+    charset = msg.get_charset()
+    if charset is None:
+        content_type = msg.get('Content-Type', '').lower()
+        pos = content_type.find('charset=')
+        if pos>=0:
+            print content_type
+            charset = content_type.split('=', 1)
+    return charset[1]
+         
+email = raw_input("email: ")
+passwd = raw_input('passwd: ')
+pop_addr = raw_input('pop_addr: ')
+
+server = poplib.POP3(pop_addr)
+print (server.getwelcome())
+
+server.user(email)
+server.pass_(passwd)
+
+print ('Message: %s, Size: %s '%server.stat())
+
+resp, mail, octects = server.list()
+#print (resp)
+#print (mail)
+#print (octects)
+
+
+resp, lines, octects = server.retr(len(mail))
+str = '\r\n'.join(lines)
+msg = Parser().parsestr(str)
+print_info(msg, 0) 
+server.quit()
